@@ -44,13 +44,17 @@ class NotionOAuthHandler:
         }
 
     async def _make_token_request(self, redirect_info: AuthRedirectInfo) -> TokenResponseInfo:
+        # Make request parameters
         url = self._make_token_url(redirect_info=redirect_info)
         body = self._make_token_body(redirect_info=redirect_info)
         headers = self._make_token_headers(redirect_info=redirect_info)
+
+        # Make the request
         async with aiohttp.ClientSession() as session:
             async with session.post(url, data=body, headers=headers) as response:
                 response_body = await response.json()
 
+        # Pack response into DTO
         token_info = TokenResponseInfo(
             access_token=response_body['access_token'],
             workspace_id=response_body['workspace_id'],
@@ -61,11 +65,12 @@ class NotionOAuthHandler:
         )
         return token_info
 
-    async def handle_auth(self, redirect_info: AuthRedirectInfo):
-        if redirect_info.error:
-            await self._consumer.consume_redirect_error(redirect_info=redirect_info)
-            raise NotionAccessDenied('Notion access was denied')
+    async def handle_error(self, error: str) -> None:
+        await self._consumer.consume_redirect_error(error=error)
+        raise NotionAccessDenied('Notion access was denied')
 
+    async def handle_auth(self, redirect_info: AuthRedirectInfo) -> TokenResponseInfo:
         state_info = await self._consumer.consume_redirect_info(redirect_info=redirect_info)
         token_info = await self._make_token_request(redirect_info=redirect_info)
         await self._consumer.consume_token_info(token_info=token_info, state_info=state_info)
+        return token_info

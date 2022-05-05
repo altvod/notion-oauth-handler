@@ -19,7 +19,7 @@ class NotionOAuthConsumer(abc.ABC, Generic[_STATE_TV]):
     - consume_redirect_error
     """
 
-    async def consume_redirect_error(self, redirect_info: AuthRedirectInfo) -> None:
+    async def consume_redirect_error(self, error: str) -> None:
         pass
 
     @abc.abstractmethod
@@ -44,3 +44,8 @@ class DefaultNotionOAuthConsumer(NotionOAuthConsumer[AuthRedirectInfo]):
     @abc.abstractmethod
     async def consume_token_info(self, token_info: TokenResponseInfo, state_info: AuthRedirectInfo) -> None:
         raise NotImplementedError
+
+
+class DummyNotionOAuthConsumer(NotionOAuthConsumer[AuthRedirectInfo]):
+    async def consume_token_info(self, token_info: TokenResponseInfo, state_info: AuthRedirectInfo) -> None:
+        print(f'Consumed token info: {token_info}')

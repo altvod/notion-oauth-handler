@@ -6,7 +6,6 @@ import attr
 @attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class AuthRedirectInfo:
     redirect_uri: str
-    error: str
     code: str
     state: str
 
