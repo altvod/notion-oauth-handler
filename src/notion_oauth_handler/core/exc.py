@@ -1,0 +1,2 @@
+class NotionAccessDenied(Exception):
+    pass
