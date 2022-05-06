@@ -1,11 +1,12 @@
 import base64
+from http import HTTPStatus
 from typing import Any, ClassVar
 
 import aiohttp
 import attr
 import yarl
 
-from notion_oauth_handler.core.exc import NotionAccessDenied
+import notion_oauth_handler.core.exc as exc
 from notion_oauth_handler.core.dto import AuthRedirectInfo, TokenResponseInfo
 from notion_oauth_handler.core.consumer import NotionOAuthConsumer
 
@@ -16,8 +17,8 @@ class NotionOAuthHandler:
     Handles Notion OAuth 2
     """
 
-    _default_base_url: ClassVar[str] = ''
-    _auth_entrypoint: ClassVar[str] = '/v1/oauth/token'
+    _default_base_url: ClassVar[str] = 'https://api.notion.com'
+    _auth_entrypoint: ClassVar[str] = 'v1/oauth/token'
 
     _consumer: NotionOAuthConsumer = attr.ib(kw_only=True)
     _client_id: str = attr.ib(kw_only=True)
@@ -29,11 +30,11 @@ class NotionOAuthHandler:
         return self._default_base_url
 
     def _make_token_url(self, redirect_info: AuthRedirectInfo) -> yarl.URL:
-        return yarl.URL(self._base_url) / self._auth_entrypoint
+        return yarl.URL(self._base_url.rstrip('/')) / self._auth_entrypoint.lstrip('/')
 
     def _make_token_headers(self, redirect_info: AuthRedirectInfo) -> Any:
         return {
-            'Authorization': base64.b64encode(f'{self._client_id}:{self._client_secret}'.encode()),
+            'Authorization': base64.b64encode(f'{self._client_id}:{self._client_secret}'.encode()).decode(),
         }
 
     def _make_token_body(self, redirect_info: AuthRedirectInfo) -> dict:
@@ -52,6 +53,8 @@ class NotionOAuthHandler:
         # Make the request
         async with aiohttp.ClientSession() as session:
             async with session.post(url, data=body, headers=headers) as response:
+                if response.status != HTTPStatus.OK:
+                    raise exc.TokenRequestFailed('Access token request to Notion has failed')
                 response_body = await response.json()
 
         # Pack response into DTO
@@ -67,7 +70,7 @@ class NotionOAuthHandler:
 
     async def handle_error(self, error: str) -> None:
         await self._consumer.consume_redirect_error(error=error)
-        raise NotionAccessDenied('Notion access was denied')
+        raise exc.NotionAccessDenied('Notion access was denied')
 
     async def handle_auth(self, redirect_info: AuthRedirectInfo) -> TokenResponseInfo:
         state_info = await self._consumer.consume_redirect_info(redirect_info=redirect_info)

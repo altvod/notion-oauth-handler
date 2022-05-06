@@ -27,3 +27,5 @@ def notion_oauth_middleware_factory(
         request[OAUTH_HANDLER_REQUEST_KEY] = oauth_handler
         request[RESPONSE_FACTORY_REQUEST_KEY] = response_factory
         return await handler(request)
+
+    return middleware_impl

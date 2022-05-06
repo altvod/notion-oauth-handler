@@ -29,7 +29,7 @@ def make_app(
     """
 
     base_path = base_path.rstrip('/')
-    redirect_path = '/' + redirect_path.lstrip('/')
+    redirect_path = redirect_path.lstrip('/')
 
     app = web.Application(
         middlewares=[

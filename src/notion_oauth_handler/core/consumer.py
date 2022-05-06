@@ -46,6 +46,6 @@ class DefaultNotionOAuthConsumer(NotionOAuthConsumer[AuthRedirectInfo]):
         raise NotImplementedError
 
 
-class DummyNotionOAuthConsumer(NotionOAuthConsumer[AuthRedirectInfo]):
+class DummyNotionOAuthConsumer(DefaultNotionOAuthConsumer):
     async def consume_token_info(self, token_info: TokenResponseInfo, state_info: AuthRedirectInfo) -> None:
         print(f'Consumed token info: {token_info}')
