@@ -13,6 +13,7 @@ from notion_oauth_handler.core.dto import TokenResponseInfo
 from notion_oauth_handler.core.consumer import NotionOAuthConsumer
 from notion_oauth_handler.server.response import NotionOAuthResponseFactory
 from notion_oauth_handler.server.app import make_app
+from notion_oauth_handler.mock.app import make_mock_app
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -25,27 +26,35 @@ def get_parser() -> argparse.ArgumentParser:
         help='Response factory class entrypoint name',
     )
 
-    listen_cmd_parser = subparsers.add_parser(
-        'serve', help='Run HTTP server', parents=[response_factory_arg_parser]
+    host_port_arg_parser = argparse.ArgumentParser(add_help=False)
+    host_port_arg_parser.add_argument('--host', default='0.0.0.0', help='Server host')
+    host_port_arg_parser.add_argument('--port', default='8000', type=int, help='Server port')
+
+    serve_cmd_parser = subparsers.add_parser(
+        'serve', help='Run HTTP server',
+        parents=[response_factory_arg_parser, host_port_arg_parser]
     )
-    listen_cmd_parser.add_argument(
+    serve_cmd_parser.add_argument(
         '--client-id-key', default='NOTION_CLIENT_ID',
         help='Name of env var for Notion client ID',
     )
-    listen_cmd_parser.add_argument(
+    serve_cmd_parser.add_argument(
         '--client-secret-key', default='NOTION_CLIENT_SECRET',
         help='Name of env var for Notion client sercret',
     )
-    listen_cmd_parser.add_argument(
+    serve_cmd_parser.add_argument(
         '--consumer', default='dummy',
         help='Consumer class entrypoint name',
     )
-    listen_cmd_parser.add_argument('--host', default='0.0.0.0', help='Server host')
-    listen_cmd_parser.add_argument('--port', default='8000', type=int, help='Server port')
-    listen_cmd_parser.add_argument(
+    serve_cmd_parser.add_argument(
         '--base-path', default='', help='Base path for all endpoints')
-    listen_cmd_parser.add_argument(
+    serve_cmd_parser.add_argument(
         '--redirect-path', default='/auth_redirect', help='Path of redirect endpoint')
+
+    subparsers.add_parser(
+        'mock', help='Run Notion mock server',
+        parents=[host_port_arg_parser]
+    )
 
     consumer_cmd_parser = subparsers.add_parser('consumer', help='Consumer information')
     consumer_cmd_subparsers = consumer_cmd_parser.add_subparsers(
@@ -142,6 +151,11 @@ class NotionOAuthTool:
         web.run_app(app, host=host, port=port)
 
     @classmethod
+    def mock(cls, host: str, port: int) -> None:
+        app = make_mock_app()
+        web.run_app(app, host=host, port=port)
+
+    @classmethod
     def _print_http_response(cls, response: web.Response) -> None:
         print(f'Status: {response.status}')
         print(f'Headers:')
@@ -190,6 +204,8 @@ class NotionOAuthTool:
                 host=args.host, port=args.port,
                 base_path=args.base_path, redirect_path=args.redirect_path,
             )
+        elif args.command == 'mock':
+            cls.mock(host=args.host, port=args.port)
         elif args.command == 'consumer':
             if args.consumer_command == 'list':
                 cls.consumer_list()
