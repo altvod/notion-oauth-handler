@@ -1,3 +1,4 @@
+import logging
 from http import HTTPStatus
 
 import aiohttp.web
@@ -9,6 +10,9 @@ from notion_oauth_handler.server.middleware import (
     OAUTH_HANDLER_REQUEST_KEY, RESPONSE_FACTORY_REQUEST_KEY,
 )
 from notion_oauth_handler.server.response import NotionOAuthResponseFactory
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class NotionOAuthRedirectView(aiohttp.web.View):
@@ -23,6 +27,8 @@ class NotionOAuthRedirectView(aiohttp.web.View):
         return response_factory
 
     async def get(self) -> aiohttp.web.Response:
+        _LOGGER.info('Accepted redirect request')
+
         handler = self.get_oauth_handler()
         response_factory = self.get_response_factory()
 

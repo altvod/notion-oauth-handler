@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import json
+import logging
 import os
 from importlib import metadata
 from typing import Any, Type
@@ -42,9 +43,9 @@ def get_parser() -> argparse.ArgumentParser:
     listen_cmd_parser.add_argument('--host', default='0.0.0.0', help='Server host')
     listen_cmd_parser.add_argument('--port', default='8000', type=int, help='Server port')
     listen_cmd_parser.add_argument(
-        '--base-path', default='/auth_redirect', help='Base path for all endpoints')
+        '--base-path', default='', help='Base path for all endpoints')
     listen_cmd_parser.add_argument(
-        '--redirect-path', default='', help='Path of redirect endpoint')
+        '--redirect-path', default='/auth_redirect', help='Path of redirect endpoint')
 
     consumer_cmd_parser = subparsers.add_parser('consumer', help='Consumer information')
     consumer_cmd_subparsers = consumer_cmd_parser.add_subparsers(
@@ -210,5 +211,13 @@ class NotionOAuthTool:
                 )
 
 
+def configure_logging() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        handlers=[logging.StreamHandler()],
+    )
+
+
 def run() -> None:
+    configure_logging()
     NotionOAuthTool.run(args=get_parser().parse_args())
