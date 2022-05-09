@@ -4,15 +4,14 @@ import json
 import logging
 import os
 from importlib import metadata
-from typing import Any, Type
+from typing import Any
 
 from aiohttp import web
 
 import notion_oauth_handler as package
 from notion_oauth_handler.core.dto import TokenResponseInfo
-from notion_oauth_handler.core.consumer import NotionOAuthConsumer
-from notion_oauth_handler.server.response import NotionOAuthResponseFactory
-from notion_oauth_handler.server.app import make_app
+from notion_oauth_handler.server.app import make_app_from_config, make_app_from_file
+from notion_oauth_handler.server.config import AppConfiguration
 from notion_oauth_handler.mock.app import make_mock_app
 
 
@@ -33,6 +32,10 @@ def get_parser() -> argparse.ArgumentParser:
     serve_cmd_parser = subparsers.add_parser(
         'serve', help='Run HTTP server',
         parents=[response_factory_arg_parser, host_port_arg_parser]
+    )
+    serve_cmd_parser.add_argument(
+        '--config-file', default='',
+        help='Load configuration from file',
     )
     serve_cmd_parser.add_argument(
         '--client-id-key', default='NOTION_CLIENT_ID',
@@ -112,42 +115,29 @@ class NotionOAuthTool:
             print(ep.name)
 
     @classmethod
-    def _get_consumer(cls, consumer_name: str) -> NotionOAuthConsumer:
-        entrypoints = metadata.entry_points()[cls._consumer_entrypoint_key]
-        consumer_cls: Type[NotionOAuthConsumer] = next(
-            iter(ep for ep in entrypoints if ep.name == consumer_name)
-        ).load()
-        consumer = consumer_cls()
-        return consumer
-
-    @classmethod
-    def _get_response_factory(cls, response_factory_name: str) -> NotionOAuthResponseFactory:
-        entrypoints = metadata.entry_points()[cls._response_factory_entrypoint_key]
-        response_factory_cls: Type[NotionOAuthResponseFactory] = next(
-            iter(ep for ep in entrypoints if ep.name == response_factory_name)
-        ).load()
-        response_factory = response_factory_cls()
-        return response_factory
-
-    @classmethod
     def serve(
             cls,
+            config_file: str,
             client_id_key: str, client_secret_key: str,
             consumer_name: str, response_factory_name: str,
             host: str, port: int,
             base_path: str, redirect_path: str,
     ) -> None:
-
-        consumer = cls._get_consumer(consumer_name=consumer_name)
-        response_factory = cls._get_response_factory(response_factory_name=response_factory_name)
-
-        app = make_app(
-            consumer=consumer,
-            response_factory=response_factory,
-            notion_client_id=os.environ[client_id_key],
-            notion_client_secret=os.environ[client_secret_key],
-            base_path=base_path, redirect_path=redirect_path,
-        )
+        if config_file:
+            app = make_app_from_file(
+                filename=config_file,
+            )
+        else:
+            app = make_app_from_config(
+                config=AppConfiguration(
+                    consumer_name=consumer_name,
+                    response_factory_name=response_factory_name,
+                    notion_client_id=os.environ[client_id_key],
+                    notion_client_secret=os.environ[client_secret_key],
+                    base_path=base_path,
+                    redirect_path=redirect_path,
+                )
+            )
         web.run_app(app, host=host, port=port)
 
     @classmethod
@@ -197,12 +187,15 @@ class NotionOAuthTool:
     def run(cls, args: Any) -> None:
         if args.command == 'serve':
             cls.serve(
+                config_file=args.config_file,
                 client_id_key=args.client_id_key,
                 client_secret_key=args.client_secret_key,
                 consumer_name=args.consumer,
                 response_factory_name=args.response_factory,
-                host=args.host, port=args.port,
-                base_path=args.base_path, redirect_path=args.redirect_path,
+                host=args.host,
+                port=args.port,
+                base_path=args.base_path,
+                redirect_path=args.redirect_path,
             )
         elif args.command == 'mock':
             cls.mock(host=args.host, port=args.port)
@@ -216,9 +209,12 @@ class NotionOAuthTool:
             if args.response_command == 'auth':
                 cls.response_auth(
                     response_factory_name=args.response_factory,
-                    access_token=args.access_token, workspace_id=args.workspace_id,
-                    workspace_name=args.workspace_name, workspace_icon=args.workspace_icon,
-                    bot_id=args.bot_id, owner=args.owner,
+                    access_token=args.access_token,
+                    workspace_id=args.workspace_id,
+                    workspace_name=args.workspace_name,
+                    workspace_icon=args.workspace_icon,
+                    bot_id=args.bot_id,
+                    owner=args.owner,
                 )
             elif args.response_command == 'error':
                 cls.response_error(
