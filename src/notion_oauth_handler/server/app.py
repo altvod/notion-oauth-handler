@@ -72,11 +72,21 @@ def make_app(
 
 
 def make_app_from_config(config: AppConfiguration) -> web.Application:
+    if config.notion_client_id:
+        notion_client_id = config.notion_client_id
+    else:
+        notion_client_id = os.environ[config.notion_client_id_key]
+
+    if config.notion_client_secret:
+        notion_client_secret = config.notion_client_secret
+    else:
+        notion_client_secret = os.environ[config.notion_client_secret_key]
+
     return make_app(
         consumer=_get_consumer_from_name(config.consumer_name),
         response_factory=_get_response_factory_from_name(config.response_factory_name),
-        notion_client_id=config.notion_client_id,
-        notion_client_secret=config.notion_client_secret,
+        notion_client_id=notion_client_id,
+        notion_client_secret=notion_client_secret,
         base_path=config.base_path,
         redirect_path=config.redirect_path,
     )

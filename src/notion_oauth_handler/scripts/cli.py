@@ -38,11 +38,11 @@ def get_parser() -> argparse.ArgumentParser:
         help='Load configuration from file',
     )
     serve_cmd_parser.add_argument(
-        '--client-id-key', default='NOTION_CLIENT_ID',
+        '--notion-client-id-key', default='NOTION_CLIENT_ID',
         help='Name of env var for Notion client ID',
     )
     serve_cmd_parser.add_argument(
-        '--client-secret-key', default='NOTION_CLIENT_SECRET',
+        '--notion-client-secret-key', default='NOTION_CLIENT_SECRET',
         help='Name of env var for Notion client sercret',
     )
     serve_cmd_parser.add_argument(
@@ -118,7 +118,7 @@ class NotionOAuthTool:
     def serve(
             cls,
             config_file: str,
-            client_id_key: str, client_secret_key: str,
+            notion_client_id_key: str, notion_client_secret_key: str,
             consumer_name: str, response_factory_name: str,
             host: str, port: int,
             base_path: str, redirect_path: str,
@@ -132,8 +132,8 @@ class NotionOAuthTool:
                 config=AppConfiguration(
                     consumer_name=consumer_name,
                     response_factory_name=response_factory_name,
-                    notion_client_id=os.environ[client_id_key],
-                    notion_client_secret=os.environ[client_secret_key],
+                    notion_client_id_key=notion_client_id_key,
+                    notion_client_secret_key=notion_client_secret_key,
                     base_path=base_path,
                     redirect_path=redirect_path,
                 )
@@ -188,8 +188,8 @@ class NotionOAuthTool:
         if args.command == 'serve':
             cls.serve(
                 config_file=args.config_file,
-                client_id_key=args.client_id_key,
-                client_secret_key=args.client_secret_key,
+                notion_client_id_key=args.notion_client_id_key,
+                notion_client_secret_key=args.notion_client_secret_key,
                 consumer_name=args.consumer,
                 response_factory_name=args.response_factory,
                 host=args.host,
