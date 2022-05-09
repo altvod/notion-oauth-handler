@@ -2,17 +2,18 @@ import argparse
 import asyncio
 import json
 import logging
-import os
-from importlib import metadata
 from typing import Any
 
 from aiohttp import web
 
-import notion_oauth_handler as package
 from notion_oauth_handler.core.dto import TokenResponseInfo
 from notion_oauth_handler.server.app import make_app_from_config, make_app_from_file
 from notion_oauth_handler.server.config import AppConfiguration
 from notion_oauth_handler.mock.app import make_mock_app
+from notion_oauth_handler.entrypoints import (
+    RESPONSE_FACTORY_ENTRYPOINT_NAME, CONSUMER_ENTRYPOINT_NAME,
+    list_entrypoint_item_names, get_response_factory,
+)
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -93,26 +94,14 @@ def get_parser() -> argparse.ArgumentParser:
 
 class NotionOAuthTool:
     @classmethod
-    @property
-    def _consumer_entrypoint_key(cls) -> str:
-        return f'{package.__name__}.consumer'
-
-    @classmethod
-    @property
-    def _response_factory_entrypoint_key(cls) -> str:
-        return f'{package.__name__}.response_factory'
-
-    @classmethod
     def consumer_list(cls) -> None:
-        entrypoints = metadata.entry_points()[cls._consumer_entrypoint_key]
-        for ep in entrypoints:
-            print(ep.name)
+        for item_name in list_entrypoint_item_names(CONSUMER_ENTRYPOINT_NAME):
+            print(item_name)
 
     @classmethod
     def response_factory_list(cls) -> None:
-        entrypoints = metadata.entry_points()[cls._response_factory_entrypoint_key]
-        for ep in entrypoints:
-            print(ep.name)
+        for item_name in list_entrypoint_item_names(RESPONSE_FACTORY_ENTRYPOINT_NAME):
+            print(item_name)
 
     @classmethod
     def serve(
@@ -151,7 +140,8 @@ class NotionOAuthTool:
         print(f'Headers:')
         for header_name, header_value in response.headers.items():
             print(f'    {header_name}: {header_value}')
-        print(f'Body:\n{response.body.decode()}')
+        if isinstance(response.body, bytes):
+            print(f'Body:\n{response.body.decode()}')
 
     @classmethod
     def response_auth(
@@ -164,7 +154,7 @@ class NotionOAuthTool:
             bot_id: str,
             owner: str,
     ) -> None:
-        response_factory = cls._get_response_factory(response_factory_name=response_factory_name)
+        response_factory = get_response_factory(response_factory_name)
         token_info = TokenResponseInfo(
             access_token=access_token, workspace_id=workspace_id,
             workspace_name=workspace_name, workspace_icon=workspace_icon,
@@ -179,7 +169,7 @@ class NotionOAuthTool:
             response_factory_name: str,
             error: str,
     ) -> None:
-        response_factory = cls._get_response_factory(response_factory_name=response_factory_name)
+        response_factory = get_response_factory(response_factory_name)
         response = asyncio.run(response_factory.make_error_response(error=error))
         cls._print_http_response(response)
 
