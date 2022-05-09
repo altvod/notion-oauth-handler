@@ -36,9 +36,9 @@ def load_config_from_file(filename: str) -> AppConfiguration:
         consumer_name=config['handler'].get('consumer', 'dummy'),
         response_factory_name=config['handler'].get('response_factory', 'dummy'),
         notion_client_id=config['notion'].get('client_id', ''),
-        notion_client_id_key=config['notion'].get('client_id', ''),
+        notion_client_id_key=config['notion'].get('client_id_key', ''),
         notion_client_secret=config['notion'].get('client_secret', ''),
-        notion_client_secret_key=config['notion'].get('client_secret', ''),
+        notion_client_secret_key=config['notion'].get('client_secret_key', ''),
         base_path=config['server'].get('base_path', ''),
         redirect_path=config['server'].get('redirect_path', '/auth_redirect'),
     )
