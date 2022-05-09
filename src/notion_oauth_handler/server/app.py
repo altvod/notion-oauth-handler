@@ -75,7 +75,7 @@ def make_app_from_config(config: AppConfiguration) -> web.Application:
 
 def make_app_from_file(filename: Optional[str] = None) -> web.Application:
     if not filename:
-        filename = os.environ.get('NOTION_OUATH_HANDLER_CONFIG', 'notion-oauth-handler.ini')
+        filename = os.environ.get('NOTION_OAUTH_HANDLER_CONFIG', 'notion-oauth-handler.ini')
     assert filename is not None
     config = load_config_from_file(filename)
     return make_app_from_config(config=config)
