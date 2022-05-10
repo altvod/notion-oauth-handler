@@ -39,7 +39,7 @@ class NotionOAuthRedirectView(aiohttp.web.View):
                 return await response_factory.make_access_denied_response(error_text=error_text)
 
         redirect_info = AuthRedirectInfo(
-            redirect_uri=str(self.request.url.update_query(None)),
+            redirect_uri=str(self.request.url).split('?')[0],  # https://github.com/aio-libs/yarl/issues/723
             state=self.request.query.get('state', ''),
             code=self.request.query.get('code', ''),
         )
