@@ -19,7 +19,7 @@ class NotionOAuthConsumer(abc.ABC, Generic[_STATE_TV]):
     - consume_redirect_error
     """
 
-    async def consume_redirect_error(self, error: str) -> None:
+    async def consume_redirect_error(self, error_text: str) -> None:
         pass
 
     @abc.abstractmethod

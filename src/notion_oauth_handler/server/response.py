@@ -5,13 +5,20 @@ from typing import Any, Optional
 from aiohttp.web import Response
 from aiohttp.typedefs import LooseHeaders
 
+import notion_oauth_handler.core.exc as exc
 from notion_oauth_handler.core.dto import TokenResponseInfo
 
 
 class NotionOAuthResponseFactory(abc.ABC):
     @abc.abstractmethod
-    async def make_error_response(self, error: str) -> Response:
+    async def make_access_denied_response(self, error_text: str) -> Response:
         raise NotImplementedError
+
+    async def make_bad_request_response(self, err: exc.TokenRequestFailed) -> Response:
+        return self.make_response(
+            status=HTTPStatus.BAD_REQUEST,
+            text='Token request failed',
+        )
 
     @abc.abstractmethod
     async def make_auth_response(self, token_info: TokenResponseInfo) -> Response:
@@ -31,7 +38,7 @@ class NotionOAuthResponseFactory(abc.ABC):
 
 
 class DummyNotionOAuthResponseFactory(NotionOAuthResponseFactory):
-    async def make_error_response(self, error: str) -> Response:
+    async def make_access_denied_response(self, error_text: str) -> Response:
         return self.make_response(text='Error', status=HTTPStatus.FORBIDDEN)
 
     async def make_auth_response(self, token_info: TokenResponseInfo) -> Response:
@@ -39,8 +46,21 @@ class DummyNotionOAuthResponseFactory(NotionOAuthResponseFactory):
 
 
 class EchoNotionOAuthResponseFactory(NotionOAuthResponseFactory):
-    async def make_error_response(self, error: str) -> Response:
-        return self.make_response(text=f'Error: {error}', status=HTTPStatus.FORBIDDEN)
+    async def make_access_denied_response(self, error_text: str) -> Response:
+        return self.make_response(text=f'Error: {error_text}', status=HTTPStatus.FORBIDDEN)
 
     async def make_auth_response(self, token_info: TokenResponseInfo) -> Response:
         return self.make_response(text=f'Token info: {token_info}', status=HTTPStatus.OK)
+
+
+class DebugNotionOAuthResponseFactory(EchoNotionOAuthResponseFactory):
+    async def make_bad_request_response(self, err: exc.TokenRequestFailed) -> Response:
+        return self.make_response(
+            status=HTTPStatus.BAD_REQUEST,
+            text=(
+                f'Request data: {err.request_data}\n'
+                f'Response status: {err.response_status}:\n'
+                f'Response body: {err.response_body}'
+            ),
+        )
+

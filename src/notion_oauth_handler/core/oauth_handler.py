@@ -54,7 +54,11 @@ class NotionOAuthHandler:
         async with aiohttp.ClientSession() as session:
             async with session.post(url, data=body, headers=headers) as response:
                 if response.status != HTTPStatus.OK:
-                    raise exc.TokenRequestFailed('Access token request to Notion has failed')
+                    raise exc.TokenRequestFailed(
+                        request_data=body,
+                        response_status=response.status,
+                        response_body=await response.text(),
+                    )
                 response_body = await response.json()
 
         # Pack response into DTO
@@ -68,8 +72,8 @@ class NotionOAuthHandler:
         )
         return token_info
 
-    async def handle_error(self, error: str) -> None:
-        await self._consumer.consume_redirect_error(error=error)
+    async def handle_error(self, error_text: str) -> None:
+        await self._consumer.consume_redirect_error(error_text=error_text)
         raise exc.NotionAccessDenied('Notion access was denied')
 
     async def handle_auth(self, redirect_info: AuthRedirectInfo) -> TokenResponseInfo:

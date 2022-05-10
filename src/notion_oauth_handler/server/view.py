@@ -1,5 +1,4 @@
 import logging
-from http import HTTPStatus
 
 import aiohttp.web
 
@@ -32,24 +31,21 @@ class NotionOAuthRedirectView(aiohttp.web.View):
         handler = self.get_oauth_handler()
         response_factory = self.get_response_factory()
 
-        error = self.request.query.get('error', '')
-        if error:
+        error_text = self.request.query.get('error', '')
+        if error_text:
             try:
-                await handler.handle_error(error=error)
+                await handler.handle_error(error_text=error_text)
             except exc.NotionAccessDenied:
-                return await response_factory.make_error_response(error=error)
+                return await response_factory.make_access_denied_response(error_text=error_text)
 
         redirect_info = AuthRedirectInfo(
-            redirect_uri=str(self.request.url),
+            redirect_uri=str(self.request.url.update_query(None)),
             state=self.request.query.get('state', ''),
             code=self.request.query.get('code', ''),
         )
         try:
             token_info = await handler.handle_auth(redirect_info=redirect_info)
-        except exc.TokenRequestFailed:
-            return aiohttp.web.Response(
-                status=HTTPStatus.BAD_REQUEST,
-                text='Token request failed',
-            )
+        except exc.TokenRequestFailed as err:
+            return await response_factory.make_bad_request_response(err=err)
 
         return await response_factory.make_auth_response(token_info=token_info)
