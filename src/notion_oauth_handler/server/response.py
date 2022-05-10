@@ -59,6 +59,7 @@ class DebugNotionOAuthResponseFactory(EchoNotionOAuthResponseFactory):
             status=HTTPStatus.BAD_REQUEST,
             text=(
                 f'Request data: {err.request_data}\n'
+                f'Request headers: {[err.request_headers]}\n'
                 f'Response status: {err.response_status}:\n'
                 f'Response body: {err.response_body}'
             ),

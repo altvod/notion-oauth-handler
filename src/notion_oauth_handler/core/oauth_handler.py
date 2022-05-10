@@ -33,8 +33,9 @@ class NotionOAuthHandler:
         return yarl.URL(self._base_url.rstrip('/')) / self._auth_entrypoint.lstrip('/')
 
     def _make_token_headers(self, redirect_info: AuthRedirectInfo) -> Any:
+        credential_token = base64.b64encode(f'{self._client_id}:{self._client_secret}'.encode()).decode()
         return {
-            'Authorization': base64.b64encode(f'{self._client_id}:{self._client_secret}'.encode()).decode(),
+            'Authorization': f'Basic {credential_token}',
         }
 
     def _make_token_body(self, redirect_info: AuthRedirectInfo) -> dict:
@@ -56,6 +57,7 @@ class NotionOAuthHandler:
                 if response.status != HTTPStatus.OK:
                     raise exc.TokenRequestFailed(
                         request_data=body,
+                        request_headers=headers,
                         response_status=response.status,
                         response_body=await response.text(),
                     )
