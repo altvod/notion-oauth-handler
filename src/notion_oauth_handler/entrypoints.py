@@ -23,12 +23,10 @@ def _get_entrypoint(entrypoint_name: str, item_name: str) -> Any:
     return ep_item
 
 
-def get_consumer(consumer_name: str) -> NotionOAuthConsumer:
-    consumer_cls = cast(
-        Type[NotionOAuthConsumer],
-        _get_entrypoint(entrypoint_name=CONSUMER_ENTRYPOINT_NAME, item_name=consumer_name),
-    )
-    consumer = consumer_cls()
+def get_consumer(consumer_name: str, custom_settings: dict) -> NotionOAuthConsumer:
+    consumer_cls = _get_entrypoint(entrypoint_name=CONSUMER_ENTRYPOINT_NAME, item_name=consumer_name)
+    assert issubclass(consumer_cls, NotionOAuthConsumer)
+    consumer = consumer_cls(custom_settings=custom_settings)
     return consumer
 
 

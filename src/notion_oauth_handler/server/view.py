@@ -9,7 +9,9 @@ from aiohttp.typedefs import LooseHeaders
 import notion_oauth_handler.core.exc as exc
 from notion_oauth_handler.core.dto import AuthRedirectInfo, TokenResponseInfo
 from notion_oauth_handler.core.oauth_handler import NotionOAuthHandler
-from notion_oauth_handler.server.middleware import OAUTH_HANDLER_REQUEST_KEY
+from notion_oauth_handler.server.middleware import (
+    OAUTH_HANDLER_REQUEST_KEY, CUSTOM_SETTINGS_REQUEST_KEY,
+)
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,12 +33,10 @@ class NotionOAuthRedirectView(View, abc.ABC):
     async def handle_notion_auth(self) -> Response:
         _LOGGER.info('Accepted redirect request')
 
-        handler = self.make_oauth_handler()
-
         error_text = self.request.query.get('error', '')
         if error_text:
             try:
-                await handler.handle_error(error_text=error_text)
+                await self.oauth_handler.handle_error(error_text=error_text)
             except exc.NotionAccessDenied:
                 return await self.make_access_denied_response(error_text=error_text)
 
@@ -52,7 +52,14 @@ class NotionOAuthRedirectView(View, abc.ABC):
 
         return await self.make_auth_response(token_info=token_info)
 
-    def make_oauth_handler(self) -> NotionOAuthHandler:
+    @property
+    def custom_settings(self) -> dict:
+        settings = self.request[CUSTOM_SETTINGS_REQUEST_KEY]
+        assert isinstance(settings, dict)
+        return settings
+
+    @property
+    def oauth_handler(self) -> NotionOAuthHandler:
         handler = self.request[OAUTH_HANDLER_REQUEST_KEY]
         assert isinstance(handler, NotionOAuthHandler)
         return handler

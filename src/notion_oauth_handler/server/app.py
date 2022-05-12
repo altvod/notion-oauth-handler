@@ -11,12 +11,14 @@ from notion_oauth_handler.entrypoints import get_consumer, get_auth_view_cls
 
 
 def make_app(
+        *,
         consumer: NotionOAuthConsumer,
         auth_view_cls: Type[NotionOAuthRedirectView],
         notion_client_id: str,
         notion_client_secret: str,
         base_path: str = '',
         redirect_path: str = '/auth_redirect',
+        custom_settings: dict,
 ) -> web.Application:
     """
     Create Notion OAuth handling server (aiohttp Application)
@@ -29,6 +31,7 @@ def make_app(
     :param notion_client_secret: client secret of the Notion integration
     :param base_path: custom base path for all routes
     :param redirect_path: relative path for the redirect handler
+    :param custom_settings: dict,: custom app configuration
     :return: an aiohttp `Application` instance
     """
 
@@ -41,6 +44,7 @@ def make_app(
                 consumer=consumer,
                 notion_client_id=notion_client_id,
                 notion_client_secret=notion_client_secret,
+                custom_settings=custom_settings,
             )
         ],
     )
@@ -61,13 +65,16 @@ def make_app_from_config(config: AppConfiguration) -> web.Application:
     else:
         notion_client_secret = os.environ[config.notion_client_secret_key]
 
+    consumer = get_consumer(config.consumer_name, custom_settings=config.custom_settings)
+
     return make_app(
-        consumer=get_consumer(config.consumer_name),
+        consumer=consumer,
         auth_view_cls=get_auth_view_cls(config.auth_view_name),
         notion_client_id=notion_client_id,
         notion_client_secret=notion_client_secret,
         base_path=config.base_path,
         redirect_path=config.redirect_path,
+        custom_settings=config.custom_settings,
     )
 
 

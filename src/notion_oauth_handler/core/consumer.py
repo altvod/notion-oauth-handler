@@ -1,12 +1,15 @@
 import abc
 from typing import Generic, TypeVar
 
+import attr
+
 from notion_oauth_handler.core.dto import AuthRedirectInfo, TokenResponseInfo
 
 
 _STATE_TV = TypeVar('_STATE_TV')
 
 
+@attr.s
 class NotionOAuthConsumer(abc.ABC, Generic[_STATE_TV]):
     """
     Class for application-specific implementation of the oauth handling process.
@@ -18,6 +21,8 @@ class NotionOAuthConsumer(abc.ABC, Generic[_STATE_TV]):
     and, optionally:
     - consume_redirect_error
     """
+
+    custom_settings: dict = attr.ib(kw_only=True)
 
     async def consume_redirect_error(self, error_text: str) -> None:
         pass
