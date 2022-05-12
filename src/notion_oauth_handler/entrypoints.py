@@ -3,7 +3,7 @@ from typing import Any, Type, cast
 
 import notion_oauth_handler as package
 from notion_oauth_handler.core.consumer import NotionOAuthConsumer
-from notion_oauth_handler.server.view import NotionOAuthRedirectView
+from notion_oauth_handler.server.auth_view import NotionOAuthRedirectView
 
 
 CONSUMER_ENTRYPOINT_NAME = f'{package.__name__}.consumer'

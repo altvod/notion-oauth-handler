@@ -48,7 +48,11 @@ def get_parser() -> argparse.ArgumentParser:
     serve_cmd_parser.add_argument(
         '--base-path', default='', help='Base path for all endpoints')
     serve_cmd_parser.add_argument(
-        '--redirect-path', default='/auth_redirect', help='Path of redirect endpoint')
+        '--auth-path', default='/auth', help='Path of auth the redirect endpoint')
+    serve_cmd_parser.add_argument(
+        '--privacy-path', default='/auth', help='Path of the privacy policy endpoint')
+    serve_cmd_parser.add_argument(
+        '--terms-path', default='/auth', help='Path of the terms of use endpoint')
 
     subparsers.add_parser(
         'mock', help='Run Notion mock server',
@@ -86,7 +90,10 @@ class NotionOAuthTool:
             notion_client_id_key: str, notion_client_secret_key: str,
             consumer_name: str, auth_view_name: str,
             host: str, port: int,
-            base_path: str, redirect_path: str,
+            base_path: str,
+            auth_path: str,
+            privacy_path: str,
+            terms_path: str,
     ) -> None:
         if config_file:
             app = make_app_from_file(
@@ -100,7 +107,9 @@ class NotionOAuthTool:
                     notion_client_id_key=notion_client_id_key,
                     notion_client_secret_key=notion_client_secret_key,
                     base_path=base_path,
-                    redirect_path=redirect_path,
+                    auth_path=auth_path,
+                    privacy_path=privacy_path,
+                    terms_path=terms_path,
                 )
             )
         web.run_app(app, host=host, port=port)
@@ -131,7 +140,9 @@ class NotionOAuthTool:
                 host=args.host,
                 port=args.port,
                 base_path=args.base_path,
-                redirect_path=args.redirect_path,
+                auth_path=args.auth_path,
+                privacy_path=args.privacy_path,
+                terms_path=args.terms_path,
             )
         elif args.command == 'mock':
             cls.mock(host=args.host, port=args.port)

@@ -4,7 +4,8 @@ from typing import Optional, Type
 from aiohttp import web
 
 from notion_oauth_handler.core.consumer import NotionOAuthConsumer
-from notion_oauth_handler.server.view import NotionOAuthRedirectView
+from notion_oauth_handler.server.auth_view import NotionOAuthRedirectView
+from notion_oauth_handler.server.document_view import PrivacyView, TermsView
 from notion_oauth_handler.server.middleware import notion_oauth_middleware_factory
 from notion_oauth_handler.server.config import AppConfiguration, load_config_from_file
 from notion_oauth_handler.entrypoints import get_consumer, get_auth_view_cls
@@ -17,26 +18,23 @@ def make_app(
         notion_client_id: str,
         notion_client_secret: str,
         base_path: str = '',
-        redirect_path: str = '/auth_redirect',
+        auth_path: str = '/auth',
+        privacy_path: str = '/privacy',
+        terms_path: str = '/terms',
+        privacy_filename: Optional[str] = None,
+        privacy_content_type: str = 'text/plain',
+        terms_filename: Optional[str] = None,
+        terms_content_type: str = 'text/plain',
         custom_settings: dict,
 ) -> web.Application:
     """
     Create Notion OAuth handling server (aiohttp Application)
-
-    :param consumer: a `NotionOAuthConsumer` subclass instance
-        that implements the main logic (e.g. stores the token in a database)
-    :param auth_view_cls: a `NotionOAuthRedirectView` subclass that handles
-        all of the main oauth request
-    :param notion_client_id: client ID of the Notion integration
-    :param notion_client_secret: client secret of the Notion integration
-    :param base_path: custom base path for all routes
-    :param redirect_path: relative path for the redirect handler
-    :param custom_settings: dict,: custom app configuration
-    :return: an aiohttp `Application` instance
     """
 
     base_path = base_path.rstrip('/')
-    redirect_path = redirect_path.lstrip('/')
+    auth_path = auth_path.lstrip('/')
+    privacy_path = privacy_path.lstrip('/')
+    terms_path = terms_path.lstrip('/')
 
     app = web.Application(
         middlewares=[
@@ -44,13 +42,22 @@ def make_app(
                 consumer=consumer,
                 notion_client_id=notion_client_id,
                 notion_client_secret=notion_client_secret,
+                privacy_filename=privacy_filename,
+                privacy_content_type=privacy_content_type,
+                terms_filename=terms_filename,
+                terms_content_type=terms_content_type,
                 custom_settings=custom_settings,
             )
         ],
     )
     app.add_routes([
-        web.get(f'{base_path}/{redirect_path}', auth_view_cls),
+        web.get(f'{base_path}/{auth_path}', auth_view_cls),
     ])
+    if privacy_filename is not None:
+        app.add_routes([web.get(f'{base_path}/{privacy_path}', PrivacyView)])
+    if terms_filename is not None:
+        app.add_routes([web.get(f'{base_path}/{terms_path}', TermsView)])
+
     return app
 
 
@@ -73,7 +80,13 @@ def make_app_from_config(config: AppConfiguration) -> web.Application:
         notion_client_id=notion_client_id,
         notion_client_secret=notion_client_secret,
         base_path=config.base_path,
-        redirect_path=config.redirect_path,
+        auth_path=config.auth_path,
+        privacy_path=config.privacy_path,
+        terms_path=config.terms_path,
+        privacy_filename=config.privacy_filename,
+        privacy_content_type=config.privacy_content_type,
+        terms_filename=config.terms_filename,
+        terms_content_type=config.terms_content_type,
         custom_settings=config.custom_settings,
     )
 
