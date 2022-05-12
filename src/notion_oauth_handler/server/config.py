@@ -1,4 +1,9 @@
 """
+[main]
+consumer = dummy
+auth_view = default
+custom_section = my_application
+
 [server]
 base_path =
 redirect_path = /auth_redirect
@@ -7,9 +12,8 @@ redirect_path = /auth_redirect
 client_id = ...
 client_secret = ...
 
-[handler]
-consumer = dummy
-auth_view = default
+[my_application]
+# Your custom application settings go here
 """
 
 import configparser
@@ -35,14 +39,14 @@ def load_config_from_file(filename: str) -> AppConfiguration:
     config.read(filename)
 
     custom_settings = {}
-    if config.has_section('main'):
-        main_section = config['main']
-        if main_section.get('custom_section'):
-            custom_settings = main_section['custom_section']
+    main_section = config['main']
+    if main_section.get('custom_section'):
+        custom_section_name = main_section['custom_section']
+        custom_settings = config[custom_section_name]
 
     return AppConfiguration(
-        consumer_name=config['handler'].get('consumer', 'dummy'),
-        auth_view_name=config['handler'].get('auth_view', 'default'),
+        consumer_name=main_section.get('consumer', 'dummy'),
+        auth_view_name=main_section.get('auth_view', 'default'),
         notion_client_id=config['notion'].get('client_id', ''),
         notion_client_id_key=config['notion'].get('client_id_key', ''),
         notion_client_secret=config['notion'].get('client_secret', ''),
