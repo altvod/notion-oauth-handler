@@ -33,10 +33,12 @@ class NotionOAuthRedirectView(View, abc.ABC):
     async def handle_notion_auth(self) -> Response:
         _LOGGER.info('Accepted redirect request')
 
+        handler = self.oauth_handler
+
         error_text = self.request.query.get('error', '')
         if error_text:
             try:
-                await self.oauth_handler.handle_error(error_text=error_text)
+                await handler.handle_error(error_text=error_text)
             except exc.NotionAccessDenied:
                 return await self.make_access_denied_response(error_text=error_text)
 

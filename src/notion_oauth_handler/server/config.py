@@ -43,11 +43,11 @@ def load_config_from_file(filename: str) -> AppConfiguration:
     config.read(filename)
     package_name = package.__name__
 
-    custom_settings = {}
+    custom_settings: dict[str, str] = {}
     main_section = config[package_name]
     if main_section.get('custom_section'):
         custom_section_name = main_section['custom_section']
-        custom_settings = config[custom_section_name]
+        custom_settings = dict(config[custom_section_name])
 
     notion_section = config[f'{package_name}.notion']
     server_section = config[f'{package_name}.server']
