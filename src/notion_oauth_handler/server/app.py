@@ -1,19 +1,18 @@
 import os
-from typing import Optional
+from typing import Optional, Type
 
 from aiohttp import web
 
 from notion_oauth_handler.core.consumer import NotionOAuthConsumer
 from notion_oauth_handler.server.view import NotionOAuthRedirectView
 from notion_oauth_handler.server.middleware import notion_oauth_middleware_factory
-from notion_oauth_handler.server.response import NotionOAuthResponseFactory
 from notion_oauth_handler.server.config import AppConfiguration, load_config_from_file
-from notion_oauth_handler.entrypoints import get_consumer, get_response_factory
+from notion_oauth_handler.entrypoints import get_consumer, get_auth_view_cls
 
 
 def make_app(
         consumer: NotionOAuthConsumer,
-        response_factory: NotionOAuthResponseFactory,
+        auth_view_cls: Type[NotionOAuthRedirectView],
         notion_client_id: str,
         notion_client_secret: str,
         base_path: str = '',
@@ -24,8 +23,8 @@ def make_app(
 
     :param consumer: a `NotionOAuthConsumer` subclass instance
         that implements the main logic (e.g. stores the token in a database)
-    :param response_factory: a `NotionOAuthResponseFactory` subclass instance
-        that renders HTTP responses of the server
+    :param auth_view_cls: a `NotionOAuthRedirectView` subclass that handles
+        all of the main oauth request
     :param notion_client_id: client ID of the Notion integration
     :param notion_client_secret: client secret of the Notion integration
     :param base_path: custom base path for all routes
@@ -40,14 +39,13 @@ def make_app(
         middlewares=[
             notion_oauth_middleware_factory(
                 consumer=consumer,
-                response_factory=response_factory,
                 notion_client_id=notion_client_id,
                 notion_client_secret=notion_client_secret,
             )
         ],
     )
     app.add_routes([
-        web.get(f'{base_path}/{redirect_path}', NotionOAuthRedirectView),
+        web.get(f'{base_path}/{redirect_path}', auth_view_cls),
     ])
     return app
 
@@ -65,7 +63,7 @@ def make_app_from_config(config: AppConfiguration) -> web.Application:
 
     return make_app(
         consumer=get_consumer(config.consumer_name),
-        response_factory=get_response_factory(config.response_factory_name),
+        auth_view_cls=get_auth_view_cls(config.auth_view_name),
         notion_client_id=notion_client_id,
         notion_client_secret=notion_client_secret,
         base_path=config.base_path,

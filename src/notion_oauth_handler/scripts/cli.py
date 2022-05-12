@@ -1,18 +1,15 @@
 import argparse
-import asyncio
-import json
 import logging
 from typing import Any
 
 from aiohttp import web
 
-from notion_oauth_handler.core.dto import TokenResponseInfo
 from notion_oauth_handler.server.app import make_app_from_config, make_app_from_file
 from notion_oauth_handler.server.config import AppConfiguration
 from notion_oauth_handler.mock.app import make_mock_app
 from notion_oauth_handler.entrypoints import (
-    RESPONSE_FACTORY_ENTRYPOINT_NAME, CONSUMER_ENTRYPOINT_NAME,
-    list_entrypoint_item_names, get_response_factory,
+    AUTH_VIEW_ENTRYPOINT_NAME, CONSUMER_ENTRYPOINT_NAME,
+    list_entrypoint_item_names,
 )
 
 
@@ -20,19 +17,13 @@ def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser('Notion OAuth Handler Server')
     subparsers = parser.add_subparsers(title='command', dest='command')
 
-    response_factory_arg_parser = argparse.ArgumentParser(add_help=False)
-    response_factory_arg_parser.add_argument(
-        '--response-factory', default='dummy',
-        help='Response factory class entrypoint name',
-    )
-
     host_port_arg_parser = argparse.ArgumentParser(add_help=False)
     host_port_arg_parser.add_argument('--host', default='0.0.0.0', help='Server host')
     host_port_arg_parser.add_argument('--port', default='8000', type=int, help='Server port')
 
     serve_cmd_parser = subparsers.add_parser(
         'serve', help='Run HTTP server',
-        parents=[response_factory_arg_parser, host_port_arg_parser]
+        parents=[host_port_arg_parser]
     )
     serve_cmd_parser.add_argument(
         '--config-file', default='',
@@ -51,6 +42,10 @@ def get_parser() -> argparse.ArgumentParser:
         help='Consumer class entrypoint name',
     )
     serve_cmd_parser.add_argument(
+        '--auth-view', default='dummy',
+        help='Auth view class entrypoint name',
+    )
+    serve_cmd_parser.add_argument(
         '--base-path', default='', help='Base path for all endpoints')
     serve_cmd_parser.add_argument(
         '--redirect-path', default='/auth_redirect', help='Path of redirect endpoint')
@@ -65,29 +60,10 @@ def get_parser() -> argparse.ArgumentParser:
         title='consumer_command', dest='consumer_command')
     consumer_cmd_subparsers.add_parser('list', help='List available consumers')
 
-    response_factory_cmd_parser = subparsers.add_parser('response_factory', help='Response factory information')
-    response_factory_cmd_subparsers = response_factory_cmd_parser.add_subparsers(
-        title='response_factory_command', dest='response_factory_command')
-    response_factory_cmd_subparsers.add_parser('list', help='List available response factories')
-
-    response_cmd_parser = subparsers.add_parser(
-        'response', help='Generate server response', parents=[response_factory_arg_parser]
-    )
-    response_cmd_subparsers = response_cmd_parser.add_subparsers(
-        title='response_command', dest='response_command')
-
-    response_auth_cmd_parser = response_cmd_subparsers.add_parser(
-        'auth', help='Generate successful auth response')
-    response_auth_cmd_parser.add_argument('--access-token', default='<access_token>', help='access_token value')
-    response_auth_cmd_parser.add_argument('--workspace-id', default='<workspace_id>', help='workspace_id value')
-    response_auth_cmd_parser.add_argument('--workspace-name', default='My Workspace', help='workspace_name value')
-    response_auth_cmd_parser.add_argument('--workspace-icon', default='workspace.icon', help='workspace_icon value')
-    response_auth_cmd_parser.add_argument('--bot-id', default='<bot_id>', help='bot_id value')
-    response_auth_cmd_parser.add_argument('--owner', default='{}', help='owner value')
-
-    response_error_cmd_parser = response_cmd_subparsers.add_parser(
-        'error', help='Generate auth error response')
-    response_error_cmd_parser.add_argument('--error', default='Error text', help='error value')
+    auth_view_cmd_parser = subparsers.add_parser('auth_view', help='Auth view information')
+    auth_view_cmd_subparsers = auth_view_cmd_parser.add_subparsers(
+        title='auth_view_command', dest='auth_view_command')
+    auth_view_cmd_subparsers.add_parser('list', help='List available auth views')
 
     return parser
 
@@ -99,8 +75,8 @@ class NotionOAuthTool:
             print(item_name)
 
     @classmethod
-    def response_factory_list(cls) -> None:
-        for item_name in list_entrypoint_item_names(RESPONSE_FACTORY_ENTRYPOINT_NAME):
+    def auth_view_list(cls) -> None:
+        for item_name in list_entrypoint_item_names(AUTH_VIEW_ENTRYPOINT_NAME):
             print(item_name)
 
     @classmethod
@@ -108,7 +84,7 @@ class NotionOAuthTool:
             cls,
             config_file: str,
             notion_client_id_key: str, notion_client_secret_key: str,
-            consumer_name: str, response_factory_name: str,
+            consumer_name: str, auth_view_name: str,
             host: str, port: int,
             base_path: str, redirect_path: str,
     ) -> None:
@@ -120,7 +96,7 @@ class NotionOAuthTool:
             app = make_app_from_config(
                 config=AppConfiguration(
                     consumer_name=consumer_name,
-                    response_factory_name=response_factory_name,
+                    auth_view_name=auth_view_name,
                     notion_client_id_key=notion_client_id_key,
                     notion_client_secret_key=notion_client_secret_key,
                     base_path=base_path,
@@ -144,36 +120,6 @@ class NotionOAuthTool:
             print(f'Body:\n{response.body.decode()}')
 
     @classmethod
-    def response_auth(
-            cls,
-            response_factory_name: str,
-            access_token: str,
-            workspace_id: str,
-            workspace_name: str,
-            workspace_icon: str,
-            bot_id: str,
-            owner: str,
-    ) -> None:
-        response_factory = get_response_factory(response_factory_name)
-        token_info = TokenResponseInfo(
-            access_token=access_token, workspace_id=workspace_id,
-            workspace_name=workspace_name, workspace_icon=workspace_icon,
-            bot_id=bot_id, owner=json.loads(owner),
-        )
-        response = asyncio.run(response_factory.make_auth_response(token_info=token_info))
-        cls._print_http_response(response)
-
-    @classmethod
-    def response_error(
-            cls,
-            response_factory_name: str,
-            error: str,
-    ) -> None:
-        response_factory = get_response_factory(response_factory_name)
-        response = asyncio.run(response_factory.make_error_response(error=error))
-        cls._print_http_response(response)
-
-    @classmethod
     def run(cls, args: Any) -> None:
         if args.command == 'serve':
             cls.serve(
@@ -181,7 +127,7 @@ class NotionOAuthTool:
                 notion_client_id_key=args.notion_client_id_key,
                 notion_client_secret_key=args.notion_client_secret_key,
                 consumer_name=args.consumer,
-                response_factory_name=args.response_factory,
+                auth_view_name=args.auth_view,
                 host=args.host,
                 port=args.port,
                 base_path=args.base_path,
@@ -192,25 +138,9 @@ class NotionOAuthTool:
         elif args.command == 'consumer':
             if args.consumer_command == 'list':
                 cls.consumer_list()
-        elif args.command == 'response_factory':
-            if args.response_factory_command == 'list':
-                cls.response_factory_list()
-        elif args.command == 'response':
-            if args.response_command == 'auth':
-                cls.response_auth(
-                    response_factory_name=args.response_factory,
-                    access_token=args.access_token,
-                    workspace_id=args.workspace_id,
-                    workspace_name=args.workspace_name,
-                    workspace_icon=args.workspace_icon,
-                    bot_id=args.bot_id,
-                    owner=args.owner,
-                )
-            elif args.response_command == 'error':
-                cls.response_error(
-                    response_factory_name=args.response_factory,
-                    error=args.error,
-                )
+        elif args.command == 'auth_view':
+            if args.auth_view_command == 'list':
+                cls.auth_view_list()
 
 
 def configure_logging() -> None:
