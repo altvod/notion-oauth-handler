@@ -1,36 +1,25 @@
-import abc
 import logging
 from http import HTTPStatus
-from typing import ClassVar
+from typing import Type
 
 from aiohttp.web import View, Response
-from aiohttp.typedefs import LooseHeaders
 
-import notion_oauth_handler.core.exc as exc
-from notion_oauth_handler.core.dto import AuthRedirectInfo, TokenResponseInfo
-from notion_oauth_handler.core.oauth_handler import NotionOAuthHandler
-from notion_oauth_handler.server.middleware import (
-    DOC_PRIVACY_REQUEST_KEY, DOC_TERMS_REQUEST_KEY,
-)
+from notion_oauth_handler.server.config import DocumentConfig
 
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class DocumentView(View):
-    doc_info_key: ClassVar[str]
+    doc_config: DocumentConfig
 
     @property
     def doc_filename(self) -> str:
-        doc_info_key = self.request[self.doc_info_key]
-        assert isinstance(doc_info_key, tuple)
-        return doc_info_key[0]
+        return self.doc_config.filename
 
     @property
     def doc_content_type(self) -> str:
-        doc_info_key = self.request[self.doc_info_key]
-        assert isinstance(doc_info_key, tuple)
-        return doc_info_key[1]
+        return self.doc_config.content_type
 
     def get_doc_body(self) -> str:
         with open(self.doc_filename) as doc_file:
@@ -45,9 +34,8 @@ class DocumentView(View):
         )
 
 
-class PrivacyView(DocumentView):
-    doc_info_key = DOC_PRIVACY_REQUEST_KEY
+def document_view_factory(document_config: DocumentConfig) -> Type[DocumentView]:
+    class CustomDocumentView(DocumentView):
+        doc_config = document_config
 
-
-class TermsView(DocumentView):
-    doc_info_key = DOC_TERMS_REQUEST_KEY
+    return CustomDocumentView

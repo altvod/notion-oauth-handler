@@ -17,21 +17,24 @@ client_secret = ...
 # or notion_client_secret_key = ...
 
 [notion_oauth_handler.documents]
-privacy_filename = docs/privacy_policy.html
-privacy_content_type = text/html
-terms_filename = docs/terms_of_use.html
-terms_content_type = text/html
+/privacy = text/html; docs/privacy_policy.html
+/terms = text/html; docs/terms_of_use.html
 
 [my_application]
 # Your custom application settings go here
 """
 
 import configparser
-from typing import Optional
 
 import attr
 
 import notion_oauth_handler as package
+
+
+@attr.s(frozen=True)
+class DocumentConfig:
+    filename: str = attr.ib(kw_only=True)
+    content_type: str = attr.ib(kw_only=True)
 
 
 @attr.s(frozen=True)
@@ -44,12 +47,7 @@ class AppConfiguration:
     notion_client_secret_key: str = attr.ib(kw_only=True, default='')
     base_path: str = attr.ib(kw_only=True, default='')
     auth_path: str = attr.ib(kw_only=True, default='/auth')
-    privacy_path: str = attr.ib(kw_only=True, default='/privacy')
-    terms_path: str = attr.ib(kw_only=True, default='/terms')
-    privacy_filename: Optional[str] = attr.ib(kw_only=True, default=None)
-    privacy_content_type: str = attr.ib(kw_only=True, default='text/plain')
-    terms_filename: Optional[str] = attr.ib(kw_only=True, default=None)
-    terms_content_type: str = attr.ib(kw_only=True, default='text/plain')
+    documents: dict[str, DocumentConfig] = attr.ib(kw_only=True, default='text/plain')
     custom_settings: dict = attr.ib(kw_only=True, factory=dict)
 
 
@@ -64,9 +62,16 @@ def load_config_from_file(filename: str) -> AppConfiguration:
         custom_section_name = main_section['custom_section']
         custom_settings = dict(config[custom_section_name])
 
-    documents_section = {}
+    documents: dict[str, DocumentConfig] = {}
     if config.has_section(f'{package_name}.documents'):
-        documents_section = dict(config[f'{package_name}.documents'])
+        documents_section = config[f'{package_name}.documents']
+        documents = {
+            server_path: DocumentConfig(
+                content_type=file_spec.split(';')[0].strip(),
+                filename=file_spec.split(';')[1].strip(),
+            )
+            for server_path, file_spec in documents_section.items()
+        }
 
     notion_section = config[f'{package_name}.notion']
     server_section = config[f'{package_name}.server']
@@ -80,11 +85,6 @@ def load_config_from_file(filename: str) -> AppConfiguration:
         notion_client_secret_key=notion_section.get('client_secret_key', ''),
         base_path=server_section.get('base_path', ''),
         auth_path=server_section.get('auth_path', '/auth'),
-        privacy_path=server_section.get('privacy_path', '/privacy'),
-        terms_path=server_section.get('terms_path', '/terms'),
-        privacy_filename=documents_section.get('privacy_filename', None),
-        privacy_content_type=documents_section.get('privacy_content_type', 'text/plain'),
-        terms_filename=documents_section.get('terms_filename', None),
-        terms_content_type=documents_section.get('terms_content_type', 'text/plain'),
+        documents=documents,
         custom_settings=custom_settings,
     )
