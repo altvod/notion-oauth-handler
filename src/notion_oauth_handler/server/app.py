@@ -42,7 +42,10 @@ def make_app(
         web.get(f'{base_path}/{auth_path}', auth_view_cls),
     ])
     for doc_serve_path, doc_config in documents.items():
-        app.add_routes([web.get(f'{base_path}/{doc_serve_path}', document_view_factory(doc_config))])
+        doc_serve_path = doc_serve_path.lstrip('/')
+        app.add_routes([
+            web.get(f'{base_path}/{doc_serve_path}', document_view_factory(doc_config))
+        ])
 
     return app
 
