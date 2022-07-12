@@ -107,7 +107,7 @@ for token handling here - all that should go into your consumer class.
 ### Registering entrypoints
 
 Once you've defined all the logic in the classes above,
-you need to make them available for `notion-auth-handler`
+you need to make them available for `notion-oauth-handler`
 by declaring them as entrypoints in your Python project configuration
 
 If you are using a `setup.cfg` file for all your settings,
@@ -150,7 +150,7 @@ where to find these classes in your code.
 
 ### Configuration file
 
-Now you need to tell `notion-auth-handler`, which of the possibly many
+Now you need to tell `notion-oauth-handler`, which of the possibly many
 implementation entrypoints to call, which url paths to use in the server,
 how to connect to your Notion integration, etc.
 This is done via a configuration file.
@@ -161,7 +161,7 @@ for all the options.
 Note that all public Notion integrations are required to have "Terms of Use"
 and "Privacy Policy" documents.
 Since using the standalone server mode assumes that you don't have another
-web server, `notion-auth-handler` can host these documents for you.
+web server, `notion-oauth-handler` can host these documents for you.
 See the `[notion_oauth_handler.documents]` section of the example configuration file.
 
 ### Web server
